@@ -1,18 +1,20 @@
 package watcher
 
-import "sync"
+import (
+	"container/list"
+	"sync"
+)
 
 type Source struct {
 	sync.RWMutex
 	value interface{}
 
-	idx      int
-	watchers map[int]*Watcher
+	watchers *list.List
 }
 
 func NewSource() *Source {
 	return &Source{
-		watchers: make(map[int]*Watcher),
+		watchers: list.New(),
 	}
 }
 
@@ -30,10 +32,15 @@ func (s *Source) Watch() (*Watcher, error) {
 	}
 
 	s.Lock()
-	id := s.idx
-	s.watchers[id] = w
-	s.idx++
+	element := s.watchers.PushBack(w)
 	s.Unlock()
+
+	go func() {
+		<-w.exit
+		s.Lock()
+		s.watchers.Remove(element)
+		s.Unlock()
+	}()
 
 	return w, nil
 }
@@ -66,11 +73,11 @@ func (s *Source) BUpdate(v interface{}) {
 }
 
 func (s *Source) copyWatchers() []*Watcher {
-	watchers := make([]*Watcher, 0, len(s.watchers))
+	watchers := make([]*Watcher, 0, s.watchers.Len())
 
 	s.RLock()
-	for _, w := range s.watchers {
-		watchers = append(watchers, w)
+	for e := s.watchers.Front(); e != nil; e = e.Next() {
+		watchers = append(watchers, e.Value.(*Watcher))
 	}
 	s.RUnlock()
 	return watchers
