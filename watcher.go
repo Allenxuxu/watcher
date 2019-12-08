@@ -10,13 +10,11 @@ type Watcher struct {
 }
 
 func (w *Watcher) Next() (interface{}, error) {
-	for {
-		select {
-		case <-w.exit:
-			return nil,ErrWatcherStopped
-		case v := <-w.updates:
-			return v, nil
-		}
+	select {
+	case <-w.exit:
+		return nil, ErrWatcherStopped
+	case v := <-w.updates:
+		return v, nil
 	}
 }
 
