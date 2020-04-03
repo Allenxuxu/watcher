@@ -3,6 +3,7 @@ package watcher
 import (
 	"fmt"
 	"sync"
+	"testing"
 	"time"
 )
 
@@ -64,4 +65,36 @@ func ExampleNewSource() {
 	// output:
 	// hello
 
+}
+
+func TestWatcher_Stop(t *testing.T) {
+	w := &Watcher{
+		exit:    make(chan interface{}),
+		updates: make(chan interface{}, 1),
+	}
+
+	for i := 0; i < 10; i++ {
+		if err := w.Stop(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	//// will panic
+	//ww := &watcher{
+	//	exit: make(chan interface{}),
+	//}
+	//for i := 0; i < 10; i++ {
+	//	_ = ww.Stop()
+	//}
+}
+
+// watcher
+type watcher struct {
+	exit chan interface{}
+}
+
+// Stop 重复 stop 会 panic
+func (w *watcher) Stop() error {
+	close(w.exit)
+	return nil
 }
